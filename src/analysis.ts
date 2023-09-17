@@ -85,8 +85,6 @@ export async function analyzeMatch(matchId: string): Promise<Map<string, MatchSt
       return accumulator;
     }, new Map<string, Aggregate<DeathStats>>());
 
-  console.log(match.data?.players?.blue)
-
   const matchStats = Array.from(matchAggregate.entries())
     .map(([player, agg]) => {
       return [

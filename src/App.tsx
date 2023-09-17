@@ -5,17 +5,19 @@ import styles from './App.module.css'
 type Header = Exclude<keyof MatchStats, "team"> | "player"
 
 function App() {
+  const [matchId, setMatchId] = useState<string>("");
   const [matchStats, setMatchStats] = useState<Map<string, MatchStats>>();
   const [sortKey, setSortKey] = useState<Header>("player");
   const [reverseOrder, setReverseOrder] = useState<boolean>(false);
 
   const onClickLoad = async () => {
-    setMatchStats(await analyzeMatch('c94b7848-860b-4d31-8340-ae97b4221da6'))
+    // setMatchStats(await analyzeMatch('c94b7848-860b-4d31-8340-ae97b4221da6'))
+    setMatchStats(await analyzeMatch(matchId))
   }
 
   const onClickHeader = (header: Header) => () => {
     if (header === sortKey) {
-      setReverseOrder(!reverseOrder);
+      setReverseOrder((prev) => !prev);
     } else {
       setSortKey(header);
       setReverseOrder(false);
@@ -24,7 +26,10 @@ function App() {
 
   return (
     <div className={styles.App}>
-      Match ID: <input />
+      <label>
+        Match ID:
+        <input value={matchId} onChange={e => setMatchId(e.target.value)} />
+      </label>
       <button onClick={onClickLoad}>Load</button>
       <table>
         <thead>
