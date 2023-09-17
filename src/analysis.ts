@@ -18,8 +18,18 @@ type Aggregate<T> = {
   [P in keyof T]: T[P][];
 };
 
-export async function test() {
-  const match = await getMatch('c94b7848-860b-4d31-8340-ae97b4221da6');
+export type MatchStats = {
+  team: "red" | "blue";
+  averageTeamDeathIndex: number;
+  lastDeaths: number;
+  firstDeaths: number;
+  untradeableDeaths?: number;
+  averageDistanceFromTeamAtDeath?: number;
+}
+
+export async function analyzeMatch(matchId: string): Promise<Map<string, MatchStats>> {
+  // const match = await getMatch('c94b7848-860b-4d31-8340-ae97b4221da6');
+  const match = await getMatch(matchId);
 
   const computeDeathStats = (killEvent: MatchRoundsInnerPlayerStatsInnerKillEventsInner, index: number): readonly [string, DeathStats] => {
     const name = killEvent?.victimDisplayName ?? killEvent?.victimPuuid ?? "";
@@ -75,11 +85,14 @@ export async function test() {
       return accumulator;
     }, new Map<string, Aggregate<DeathStats>>());
 
+  console.log(match.data?.players?.blue)
+
   const matchStats = Array.from(matchAggregate.entries())
     .map(([player, agg]) => {
       return [
         player,
         {
+          team: match.data?.players?.blue?.find(p => `${p.name}#${p.tag}` === player) !== undefined ? "blue" : "red",
           averageTeamDeathIndex: agg.teamDeathIndex.reduce((a, b) => a + b) / agg.teamDeathIndex.length,
           lastDeaths: agg.teamDeathIndex.filter(i => i === 4).length,
           firstDeaths: agg.teamDeathIndex.filter(i => i === 0).length,
@@ -88,10 +101,9 @@ export async function test() {
         }
       ] as const;
     })
-    .reduce(mapEntryReducer, new Map<string, {
-      averageTeamDeathIndex: number;
-    }>());
-  console.log(matchStats);
+    .reduce(mapEntryReducer, new Map<string, MatchStats>());
+
+  return matchStats;
 }
 
 function mapEntryReducer<K, V>(accumulator: Map<K, V>, entry: readonly [K, V])

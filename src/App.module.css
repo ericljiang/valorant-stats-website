@@ -1,0 +1,13 @@
+.App {
+  background-color: #111;
+  color: #eee;
+  height: 100vh;
+}
+
+.rowTeamBlue {
+  background-color: #104E48;
+}
+
+.rowTeamRed {
+  background-color: #4C2332;
+}
