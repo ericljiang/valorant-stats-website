@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { MatchStats, analyzeMatch } from './analysis';
 import styles from './App.module.css'
+import { MatchHistoryTable } from './MatchHistoryTable';
 
 type Header = Exclude<keyof MatchStats, "team"> | "player"
 
@@ -11,7 +12,6 @@ function App() {
   const [reverseOrder, setReverseOrder] = useState<boolean>(false);
 
   const onClickLoad = async () => {
-    // setMatchStats(await analyzeMatch('c94b7848-860b-4d31-8340-ae97b4221da6'))
     setMatchStats(await analyzeMatch(matchId))
   }
 
@@ -26,9 +26,9 @@ function App() {
 
   return (
     <div className={styles.App}>
+      <MatchHistoryTable />
       <label>
-        Match ID:
-        <input value={matchId} onChange={e => setMatchId(e.target.value)} />
+        Match ID: <input value={matchId} onChange={e => setMatchId(e.target.value)} />
       </label>
       <button onClick={onClickLoad}>Load</button>
       <table>

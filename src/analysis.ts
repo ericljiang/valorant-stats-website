@@ -1,12 +1,6 @@
-import * as henrik from "./valorant-api";
-import { MatchRoundsInner, MatchRoundsInnerPlayerStatsInnerKillEventsInner, ValorantV2MatchMatchIdGet200Response } from "./valorant-api";
 
-const config = henrik.createConfiguration();
-const api = new henrik.DefaultApi(config);
-
-async function getMatch(matchId: string): Promise<ValorantV2MatchMatchIdGet200Response> {
-  return await api.valorantV2MatchMatchIdGet(matchId);
-}
+import { getMatch } from "./api";
+import { MatchRoundsInner, MatchRoundsInnerPlayerStatsInnerKillEventsInner } from "./valorant-api";
 
 type DeathStats = {
   teamDeathIndex: number;
@@ -95,7 +89,7 @@ export async function analyzeMatch(matchId: string): Promise<Map<string, MatchSt
           lastDeaths: agg.teamDeathIndex.filter(i => i === 4).length,
           firstDeaths: agg.teamDeathIndex.filter(i => i === 0).length,
           untradeableDeaths: agg.closestAllyDistance?.filter(d => d !== undefined && d > 10).length,
-          averageDistanceFromTeamAtDeath: agg.averageAllyDistance ? agg.averageAllyDistance.filter((d): d is number => d !== undefined)?.reduce((a, b) => a + b) / agg.averageAllyDistance?.filter((d): d is number => d !== undefined).length : undefined
+          averageDistanceFromTeamAtDeath: agg.averageAllyDistance ? agg.averageAllyDistance.filter((d): d is number => d !== undefined)?.reduce((a, b) => a + b, 0) / agg.averageAllyDistance?.filter((d): d is number => d !== undefined).length : undefined
         }
       ] as const;
     })
