@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { getMatchHistory } from "./api";
 import { V1LifetimeMatchesItem } from "./valorant-api";
+import styles from './MatchHistoryTable.module.css'
 
 export function MatchHistoryTable() {
   const [playerName, setPlayerName] = useState("");
@@ -33,25 +34,31 @@ export function MatchHistoryTable() {
         </thead>
         <tbody>
           {
-            matchHistory && matchHistory.map(match => (
-              <tr>
-                <td>
-                  {match.meta?.startedAt && new Date(Date.parse(match.meta?.startedAt)).toDateString()}
-                </td>
-                <td>
-                  {match.meta?.mode}
-                </td>
-                <td>
-                  {match.meta?.map?.name}
-                </td>
-                <td>
-                  {match.stats?.team?.toLowerCase() === "blue" ? `${match.teams?.blue}:${match.teams?.red}` : `${match.teams?.red}:${match.teams?.blue}`}
-                </td>
-                <td>
-                  {match.meta?.id}
-                </td>
-              </tr>
-            ))
+            matchHistory && matchHistory.map(match => {
+              const date = match.meta?.startedAt && new Date(Date.parse(match.meta?.startedAt)).toDateString();
+              const scoreLine = match.stats?.team?.toLowerCase() === "blue" ? `${match.teams?.blue}:${match.teams?.red}` : `${match.teams?.red}:${match.teams?.blue}`;
+              const scoreDiff = (match.teams?.blue ?? 0) - (match.teams?.red ?? 0) * (match.stats?.team?.toLowerCase() === "blue" ? 1 : -1);
+              const result = scoreDiff === 0 ? "tie" : scoreDiff > 0 ? "win" : "loss";
+              return (
+                <tr className={styles[result]}>
+                  <td>
+                    {date}
+                  </td>
+                  <td>
+                    {match.meta?.mode}
+                  </td>
+                  <td>
+                    {match.meta?.map?.name}
+                  </td>
+                  <td>
+                    {scoreLine}
+                  </td>
+                  <td>
+                    {match.meta?.id}
+                  </td>
+                </tr>
+              );
+            })
           }
         </tbody>
       </table>
