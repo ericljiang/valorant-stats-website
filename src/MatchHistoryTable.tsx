@@ -4,24 +4,29 @@ import { V1LifetimeMatchesItem } from "./valorant-api";
 import styles from './MatchHistoryTable.module.css'
 
 export function MatchHistoryTable() {
-  const [playerName, setPlayerName] = useState("");
-  const [playerTag, setPlayerTag] = useState("");
   const [matchHistory, setMatchHistory] = useState<V1LifetimeMatchesItem[]>();
-
-  const onClickLoad = async () => {
-    const matchHistory = await getMatchHistory(playerName, playerTag);
-    setMatchHistory(matchHistory.data);
-  };
 
   return (
     <div>
-      <label>
-        Player name: <input value={playerName} onChange={e => setPlayerName(e.target.value)} />
-      </label>
-      <label>
-        Tag: <input value={playerTag} onChange={e => setPlayerTag(e.target.value)} />
-      </label>
-      <button onClick={onClickLoad}>Load matches</button>
+      <form onSubmit={async (e) => {
+        e.preventDefault();
+        const target = e.target as typeof e.target & {
+          name: { value: string; };
+          tag: { value: string; };
+        };
+        const name = target.name.value;
+        const tag = target.tag.value;
+        const matchHistory = await getMatchHistory(name, tag);
+        setMatchHistory(matchHistory.data);
+      }}>
+        <label>
+          Player name: <input name="name" />
+        </label>
+        <label>
+          Tag: <input name="tag" />
+        </label>
+        <button type="submit">Load matches</button>
+      </form>
       <table>
         <thead>
           <tr>
