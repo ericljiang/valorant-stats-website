@@ -8,5 +8,5 @@ export async function getMatch(matchId: string): Promise<ValorantV2MatchMatchIdG
 }
 
 export async function getMatchHistory(name: string, tag: string): Promise<V1LifetimeMatches> {
-  return await api.valorantV1LifetimeMatchesAffinityNameTagGet(Affinities.Na, name, tag, ModesApi.Competitive);
+  return await api.valorantV1LifetimeMatchesAffinityNameTagGet(Affinities.Na, name, tag);
 }
