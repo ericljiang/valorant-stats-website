@@ -26,7 +26,10 @@ function App() {
 
   return (
     <div className={styles.App}>
-      <MatchHistoryTable />
+      <MatchHistoryTable onSelectMatch={async (matchId: string) => {
+        setMatchId(matchId);
+        setMatchStats(await analyzeMatch(matchId));
+      }} />
       <label>
         Match ID: <input value={matchId} onChange={e => setMatchId(e.target.value)} />
       </label>

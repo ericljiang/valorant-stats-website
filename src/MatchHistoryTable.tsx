@@ -3,7 +3,7 @@ import { getMatchHistory } from "./api";
 import { Modes, V1LifetimeMatchesItem } from "./valorant-api";
 import styles from './MatchHistoryTable.module.css'
 
-export function MatchHistoryTable() {
+export function MatchHistoryTable(props: { onSelectMatch: (matchId: string) => void; }) {
   const [matchHistory, setMatchHistory] = useState<V1LifetimeMatchesItem[]>();
 
   return (
@@ -63,7 +63,7 @@ export function MatchHistoryTable() {
                   <td>
                     {scoreLine}
                   </td>
-                  <td>
+                  <td onClick={() => props.onSelectMatch(match.meta?.id!)}>
                     {match.meta?.id}
                   </td>
                 </tr>

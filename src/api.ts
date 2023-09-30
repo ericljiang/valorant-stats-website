@@ -1,4 +1,4 @@
-import { Affinities, DefaultApi, ModesApi, V1LifetimeMatches, ValorantV2MatchMatchIdGet200Response, createConfiguration } from "./valorant-api";
+import { Affinities, DefaultApi, V1LifetimeMatches, ValorantV2MatchMatchIdGet200Response, createConfiguration } from "./valorant-api";
 
 const config = createConfiguration();
 const api = new DefaultApi(config);
