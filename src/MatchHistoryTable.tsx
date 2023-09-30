@@ -3,8 +3,14 @@ import { getMatchHistory } from "./api";
 import { Modes, V1LifetimeMatchesItem } from "./valorant-api";
 import styles from './MatchHistoryTable.module.css'
 
+const validGameModes = [Modes.Competitive, Modes.Swiftplay, "Premier"] as const
+
 export function MatchHistoryTable(props: { onSelectMatch: (matchId: string) => void; }) {
   const [matchHistory, setMatchHistory] = useState<V1LifetimeMatchesItem[]>();
+  const [selectedMode, setSelectedMode] = useState<typeof validGameModes[number] | "">("");
+  function isValidGameMode(value: string): value is typeof validGameModes[number] {
+    return (validGameModes as readonly string[]).includes(value);
+  }
 
   return (
     <div>
@@ -17,7 +23,7 @@ export function MatchHistoryTable(props: { onSelectMatch: (matchId: string) => v
         const name = target.name.value;
         const tag = target.tag.value;
         const matchHistory = (await getMatchHistory(name, tag)).data
-          ?.filter(m => ([Modes.Competitive, Modes.Swiftplay, "Premier"] as (string | undefined)[]).includes(m.meta?.mode));
+          ?.filter(m => isValidGameMode(m.meta?.mode!));
         setMatchHistory(matchHistory);
       }}>
         <label>
@@ -28,6 +34,23 @@ export function MatchHistoryTable(props: { onSelectMatch: (matchId: string) => v
         </label>
         <button type="submit">Load matches</button>
       </form>
+      <label>
+        Game mode:
+        <select value={selectedMode} onChange={e => {
+          if (isValidGameMode(e.target.value) || e.target.value === "") {
+            setSelectedMode(e.target.value);
+          }
+        }}>
+          <option value="">All</option>
+          {
+            validGameModes.map(m => (
+              <option value={m}>
+                {m}
+              </option>
+            ))
+          }
+        </select>
+      </label>
       <table>
         <thead>
           <tr>
@@ -40,17 +63,20 @@ export function MatchHistoryTable(props: { onSelectMatch: (matchId: string) => v
         </thead>
         <tbody>
           {
-            matchHistory && matchHistory.map(match => {
+            matchHistory && matchHistory.filter(match => {
+              if (!selectedMode) return true;
+              return match.meta?.mode === selectedMode;
+            }).map(match => {
               const date = match.meta?.startedAt && new Date(Date.parse(match.meta?.startedAt)).toDateString();
               const scoreLine = match.stats?.team?.toLowerCase() === "blue" ? `${match.teams?.blue}:${match.teams?.red}` : `${match.teams?.red}:${match.teams?.blue}`;
               const scoreDiff = ((match.teams?.blue ?? 0) - (match.teams?.red ?? 0)) * (match.stats?.team?.toLowerCase() === "blue" ? 1 : -1);
               const result = scoreDiff === 0 ? "tie" : scoreDiff > 0 ? "win" : "loss";
-              if (match.meta?.id === "36968e69-35d0-4e1e-9e2d-f9838a1d80cc") {
-                console.log(scoreDiff);
-                console.log(result);
-              }
               return (
-                <tr className={styles[result]} key={match.meta?.id}>
+                <tr
+                  className={styles[result]}
+                  key={match.meta?.id}
+                  onClick={() => props.onSelectMatch(match.meta?.id!)}
+                >
                   <td>
                     {date}
                   </td>
@@ -63,7 +89,7 @@ export function MatchHistoryTable(props: { onSelectMatch: (matchId: string) => v
                   <td>
                     {scoreLine}
                   </td>
-                  <td onClick={() => props.onSelectMatch(match.meta?.id!)}>
+                  <td>
                     {match.meta?.id}
                   </td>
                 </tr>
