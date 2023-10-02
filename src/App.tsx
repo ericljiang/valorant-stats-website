@@ -43,6 +43,9 @@ function App() {
             <th onClick={onClickHeader("firstDeaths")}>firstDeaths</th>
             <th onClick={onClickHeader("untradeableDeaths")}>untradeableDeaths</th>
             <th onClick={onClickHeader("averageDistanceFromTeamAtDeath")}>averageDistanceFromTeamAtDeath</th>
+            <th onClick={onClickHeader("successfulTrades")}>successfulTrades</th>
+            <th onClick={onClickHeader("missedTrades")}>missedTrades</th>
+            <th onClick={onClickHeader("tradeRatio")}>tradeRatio</th>
           </tr>
         </thead>
         <tbody>
@@ -51,11 +54,26 @@ function App() {
               .sort(([playerA, statsA], [playerB, statsB]) => {
                 const reverseCoefficient = reverseOrder ? -1 : 1;
                 if (sortKey === "player") {
-                  if (playerA.toLowerCase() < playerB.toLowerCase()) return -1 * reverseCoefficient
-                  if (playerA.toLowerCase() > playerB.toLowerCase()) return 1 * reverseCoefficient
-                  return 0
+                  if (playerA.toLowerCase() < playerB.toLowerCase()) {
+                    return -1 * reverseCoefficient;
+                  }
+                  if (playerA.toLowerCase() > playerB.toLowerCase()) {
+                    return 1 * reverseCoefficient;
+                  }
+                  return 0;
                 }
-                return ((statsB[sortKey] ?? 0) - (statsA[sortKey] ?? 0)) * reverseCoefficient
+                if (sortKey === 'tradeRatio') {
+                  console.log(statsA[sortKey]);
+                  console.log(statsB[sortKey]);
+                }
+                const a = statsA[sortKey] ?? 0;
+                const b = statsB[sortKey] ?? 0;
+                const diff = b - a;
+                if (isNaN(diff)) {
+                  return ((isNaN(b) ? 0 : 1) - (isNaN(a) ? 0 : 1)) * reverseCoefficient;
+                } else {
+                  return diff * reverseCoefficient;
+                }
               })
               .map(([player, stats]) => (
                 <tr key={player} className={stats.team === "blue" ? styles.rowTeamBlue : styles.rowTeamRed}>
@@ -65,6 +83,9 @@ function App() {
                   <td>{stats.firstDeaths}</td>
                   <td>{stats.untradeableDeaths}</td>
                   <td>{`${stats.averageDistanceFromTeamAtDeath?.toFixed(1)}m`}</td>
+                  <td>{stats.successfulTrades}</td>
+                  <td>{stats.missedTrades}</td>
+                  {stats.tradeRatio ? <td>{(stats.tradeRatio * 100).toFixed(0)}%</td> : <td />}
                 </tr>
               ))
           }
