@@ -13,9 +13,9 @@ type TradeStats = {
   missedTrades: number;
 }
 
-type Aggregate<T> = {
+type Aggregate<T> = Required<{
   [P in keyof T]: T[P][];
-};
+}>;
 
 export type MatchStats = {
   team: "red" | "blue";
@@ -29,7 +29,12 @@ export type MatchStats = {
   tradeRatio?: number;
 }
 
-export async function analyzeMatch(matchId: string): Promise<Map<string, MatchStats>> {
+export type MatchAnalysisResult = {
+  playerStats: Map<string, MatchStats>,
+  teamStats: Map<string, MatchStats>;
+};
+
+export async function analyzeMatch(matchId: string): Promise<MatchAnalysisResult> {
   const match = await getMatch(matchId);
 
   const computeDeathStats = (killEvent: MatchRoundsInnerPlayerStatsInnerKillEventsInner, index: number, killEvents: MatchRoundsInnerPlayerStatsInnerKillEventsInner[]): readonly [string, DeathStats] => {
@@ -112,7 +117,7 @@ export async function analyzeMatch(matchId: string): Promise<Map<string, MatchSt
 
   if (!match.data?.rounds) throw Error();
 
-  const matchAggregate = match.data.rounds
+  const matchStatsAggregatePerPlayer = match.data.rounds
     .map(computeRoundStats)
     .reduce((accumulator, roundStats) => {
       roundStats.forEach((rs, player) => {
@@ -125,25 +130,25 @@ export async function analyzeMatch(matchId: string): Promise<Map<string, MatchSt
             missedTrades: []
           });
         }
-        accumulator.get(player)!.teamDeathIndex?.push(rs.teamDeathIndex);
-        accumulator.get(player)!.averageAllyDistance?.push(rs.averageAllyDistance);
-        accumulator.get(player)!.closestAllyDistance?.push(rs.closestAllyDistance);
-        accumulator.get(player)!.successfulTrades?.push(rs.successfulTrades);
-        accumulator.get(player)!.missedTrades?.push(rs.missedTrades);
+        accumulator.get(player)!.teamDeathIndex.push(rs.teamDeathIndex);
+        accumulator.get(player)!.averageAllyDistance.push(rs.averageAllyDistance);
+        accumulator.get(player)!.closestAllyDistance.push(rs.closestAllyDistance);
+        accumulator.get(player)!.successfulTrades.push(rs.successfulTrades);
+        accumulator.get(player)!.missedTrades.push(rs.missedTrades);
       });
       return accumulator;
     }, new Map<string, Aggregate<DeathStats & Partial<TradeStats>>>());
 
-  const matchStats = Array.from(matchAggregate.entries())
+  const matchStatsPerPlayer = Array.from(matchStatsAggregatePerPlayer.entries())
     .map(([player, agg]) => {
       const team = match.data?.players?.blue?.find(p => `${p.name}#${p.tag}` === player) !== undefined ? "blue" : "red";
       const averageTeamDeathIndex = agg.teamDeathIndex.reduce((a, b) => a + b) / agg.teamDeathIndex.length;
       const lastDeaths = agg.teamDeathIndex.filter(i => i === 4).length;
       const firstDeaths = agg.teamDeathIndex.filter(i => i === 0).length;
-      const untradeableDeaths = agg.closestAllyDistance?.filter(d => d !== undefined && d > 10).length;
-      const averageDistanceFromTeamAtDeath = agg.averageAllyDistance ? agg.averageAllyDistance.filter((d): d is number => d !== undefined)?.reduce((a, b) => a + b, 0) / agg.averageAllyDistance?.filter((d): d is number => d !== undefined).length : undefined;
-      const successfulTrades = agg.successfulTrades ? agg.successfulTrades.filter((n): n is number => n !== undefined).reduce((a, b) => a + b, 0) : undefined;
-      const missedTrades = agg.missedTrades ? agg.missedTrades.filter((n): n is number => n !== undefined).reduce((a, b) => a + b, 0) : undefined;
+      const untradeableDeaths = agg.closestAllyDistance.filter(d => d !== undefined && d > 10).length;
+      const averageDistanceFromTeamAtDeath = agg.averageAllyDistance.filter((d): d is number => d !== undefined)?.reduce((a, b) => a + b, 0) / agg.averageAllyDistance?.filter((d): d is number => d !== undefined).length;
+      const successfulTrades = agg.successfulTrades.filter((n): n is number => n !== undefined).reduce((a, b) => a + b, 0);
+      const missedTrades = agg.missedTrades.filter((n): n is number => n !== undefined).reduce((a, b) => a + b, 0);
       const tradeRatio = (successfulTrades !== undefined && missedTrades !== undefined) ? successfulTrades / (successfulTrades + missedTrades) : undefined
       return [
         player,
@@ -162,7 +167,52 @@ export async function analyzeMatch(matchId: string): Promise<Map<string, MatchSt
     })
     .reduce(mapEntryReducer, new Map<string, MatchStats>());
 
-  return matchStats;
+  const matchStatsAggregatePerTeam = partition(Array.from(matchStatsAggregatePerPlayer.entries())
+    .map(([player, agg]) => {
+      const team = match.data?.players?.blue?.find(p => `${p.name}#${p.tag}` === player) !== undefined ? "blue" : "red";
+      return [team, agg] as const;
+    }), ([team, _]) => team === "blue")
+    .map(partition => partition.reduce(([team, acc], [_, partitionEntry]) => {
+      return [team, {
+        teamDeathIndex: [...acc.teamDeathIndex, ...partitionEntry.teamDeathIndex],
+        averageAllyDistance: [...acc.averageAllyDistance, ...partitionEntry.averageAllyDistance],
+        closestAllyDistance: [...acc.closestAllyDistance, ...partitionEntry.closestAllyDistance],
+        successfulTrades: [...acc.successfulTrades, ...partitionEntry.successfulTrades],
+        missedTrades: [...acc.missedTrades, ...partitionEntry.missedTrades],
+      }];
+    }));
+
+  const matchStatsPerTeam = matchStatsAggregatePerTeam
+    .map(([team, agg]) => {
+      const averageTeamDeathIndex = agg.teamDeathIndex.reduce((a, b) => a + b) / agg.teamDeathIndex.length;
+      const lastDeaths = agg.teamDeathIndex.filter(i => i === 4).length;
+      const firstDeaths = agg.teamDeathIndex.filter(i => i === 0).length;
+      const untradeableDeaths = agg.closestAllyDistance.filter(d => d !== undefined && d > 10).length;
+      const averageDistanceFromTeamAtDeath = agg.averageAllyDistance.filter((d): d is number => d !== undefined)?.reduce((a, b) => a + b, 0) / agg.averageAllyDistance?.filter((d): d is number => d !== undefined).length;
+      const successfulTrades = agg.successfulTrades.filter((n): n is number => n !== undefined).reduce((a, b) => a + b, 0);
+      const missedTrades = agg.missedTrades.filter((n): n is number => n !== undefined).reduce((a, b) => a + b, 0);
+      const tradeRatio = (successfulTrades !== undefined && missedTrades !== undefined) ? successfulTrades / (successfulTrades + missedTrades) : undefined;
+      return [
+        team,
+        {
+          team,
+          averageTeamDeathIndex,
+          lastDeaths,
+          firstDeaths,
+          untradeableDeaths,
+          averageDistanceFromTeamAtDeath,
+          successfulTrades,
+          missedTrades,
+          tradeRatio
+        }
+      ] as const;
+    })
+    .reduce(mapEntryReducer, new Map<string, MatchStats>());
+
+  return {
+    playerStats: matchStatsPerPlayer,
+    teamStats: matchStatsPerTeam
+  };
 }
 
 function mapEntryReducer<K, V>(accumulator: Map<K, V>, entry: readonly [K, V])

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MatchStats, analyzeMatch } from './analysis';
+import { MatchAnalysisResult, MatchStats, analyzeMatch } from './analysis';
 import styles from './App.module.css'
 import { MatchHistoryTable } from './MatchHistoryTable';
 
@@ -7,7 +7,7 @@ type Header = Exclude<keyof MatchStats, "team"> | "player"
 
 function App() {
   const [matchId, setMatchId] = useState<string>("");
-  const [matchStats, setMatchStats] = useState<Map<string, MatchStats>>();
+  const [matchStats, setMatchStats] = useState<MatchAnalysisResult>();
   const [sortKey, setSortKey] = useState<Header>("player");
   const [reverseOrder, setReverseOrder] = useState<boolean>(false);
 
@@ -50,7 +50,47 @@ function App() {
         </thead>
         <tbody>
           {
-            matchStats && Array.from(matchStats.entries())
+            matchStats && Array.from(matchStats.teamStats.entries())
+              .sort(([playerA, statsA], [playerB, statsB]) => {
+                const reverseCoefficient = reverseOrder ? -1 : 1;
+                if (sortKey === "player") {
+                  if (playerA.toLowerCase() < playerB.toLowerCase()) {
+                    return -1 * reverseCoefficient;
+                  }
+                  if (playerA.toLowerCase() > playerB.toLowerCase()) {
+                    return 1 * reverseCoefficient;
+                  }
+                  return 0;
+                }
+                if (sortKey === 'tradeRatio') {
+                  console.log(statsA[sortKey]);
+                  console.log(statsB[sortKey]);
+                }
+                const a = statsA[sortKey] ?? 0;
+                const b = statsB[sortKey] ?? 0;
+                const diff = b - a;
+                if (isNaN(diff)) {
+                  return ((isNaN(b) ? 0 : 1) - (isNaN(a) ? 0 : 1)) * reverseCoefficient;
+                } else {
+                  return diff * reverseCoefficient;
+                }
+              })
+              .map(([team, stats]) =>
+                <tr className={team === "blue" ? styles.rowTeamBlue : styles.rowTeamRed}>
+                  <td>Team {team}</td>
+                  <td>{(stats.averageTeamDeathIndex + 1).toFixed(1)}</td>
+                  <td>{stats.lastDeaths}</td>
+                  <td>{stats.firstDeaths}</td>
+                  <td>{stats.untradeableDeaths}</td>
+                  <td>{`${stats.averageDistanceFromTeamAtDeath?.toFixed(1)}m`}</td>
+                  <td>{stats.successfulTrades}</td>
+                  <td>{stats.missedTrades}</td>
+                  {stats.tradeRatio ? <td>{(stats.tradeRatio * 100).toFixed(0)}%</td> : <td />}
+                </tr>
+              )
+          }
+          {
+            matchStats && Array.from(matchStats.playerStats.entries())
               .sort(([playerA, statsA], [playerB, statsB]) => {
                 const reverseCoefficient = reverseOrder ? -1 : 1;
                 if (sortKey === "player") {
